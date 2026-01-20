@@ -90,7 +90,7 @@
           [class.active]="currentView === 'specializations'"
           (click)="switchView('specializations')"
         >
-          🏢 Teams
+          🏢 Specializations
         </button>
         <button
           class="tab-pill"
@@ -1223,7 +1223,7 @@
                 selectedAlert.compliance?.met_count_label || "Compliance Met"
               }}
             </div>
-            <div class="detail-value align-met-count">
+            <div class="detail-value">
               {{ selectedAlert.compliance?.met_count ?? 0 }}
             </div>
           </div>
