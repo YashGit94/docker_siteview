@@ -27,36 +27,64 @@
 # CMD ["nginx", "-g", "daemon off;"]
 
 
-# --- Stage 1: Build Stage ---
-# Use the LTS version of Node on Alpine for a lightweight build environment
-FROM node:lts-alpine AS build
+# # --- Stage 1: Build Stage ---
+# # Use the LTS version of Node on Alpine for a lightweight build environment
+# FROM node:lts-alpine AS build
 
-# Set the working directory inside the container
+# # Set the working directory inside the container
+# WORKDIR /app
+
+# # Copy package files first to leverage Docker layer caching for dependencies
+# COPY package*.json ./
+
+# # Install project dependencies
+# RUN npm install
+
+# # Copy the rest of the application source code
+# COPY . .
+
+# # Build the Angular application for production
+# # This command generates the static files in the dist/sitenov directory
+# RUN npm run build -- --configuration=production
+
+# # --- Stage 2: Serve Stage ---
+# # Use a lightweight Nginx server to host the built application
+# FROM nginx:alpine
+
+# # Copy the build artifacts from the previous stage to Nginx's public directory
+# # Based on your angular.json, the output path is dist/sitenov
+# COPY --from=build /app/dist/sitenov /usr/share/nginx/html
+
+# # Expose port 80 to access the application locally
+# EXPOSE 80
+
+# # Command to start Nginx in the foreground
+# CMD ["nginx", "-g", "daemon off;"]
+
+
+
+## variable wise trigger
+
+# Stage 1: Build
+FROM node:lts-alpine AS BUILD
 WORKDIR /app
 
-# Copy package files first to leverage Docker layer caching for dependencies
+# Accept the build configuration as an argument (defaults to production)
+ARG BUILD_CONFIG=production
+
 COPY package*.json ./
+RUN npm install --silent
 
-# Install project dependencies
-RUN npm install
-
-# Copy the rest of the application source code
 COPY . .
 
-# Build the Angular application for production
-# This command generates the static files in the dist/sitenov directory
-RUN npm run build -- --configuration=production
+# Use the variable in the build command
+RUN npm run build -- --configuration=$BUILD_CONFIG --base-href=/
 
-# --- Stage 2: Serve Stage ---
-# Use a lightweight Nginx server to host the built application
+# Stage 2: Production Stage
 FROM nginx:alpine
 
-# Copy the build artifacts from the previous stage to Nginx's public directory
-# Based on your angular.json, the output path is dist/sitenov
-COPY --from=build /app/dist/sitenov /usr/share/nginx/html
+# Copy built files
+COPY --from=BUILD /app/dist/sitenov/browser /usr/share/nginx/html
 
-# Expose port 80 to access the application locally
 EXPOSE 80
-
-# Command to start Nginx in the foreground
 CMD ["nginx", "-g", "daemon off;"]
