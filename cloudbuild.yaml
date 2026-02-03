@@ -204,5 +204,5 @@ steps:
 options:
   # This cuts Angular build time significantly
   machineType: 'E2_HIGHCPU_32'
-  logging: GCS_ONLY
+  logging: CLOUD_LOGGING_ONLY
   substitution_option: 'ALLOW_LOOSE'
