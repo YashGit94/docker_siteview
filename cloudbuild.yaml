@@ -1,47 +1,117 @@
-# #working 
+# # #working 
+# # steps:
+# #   # 1. Build and Push (Sanitized)
+# #   - name: 'gcr.io/cloud-builders/docker'
+# #     entrypoint: 'bash'
+# #     args:
+# #       - '-c'
+# #       - |
+# #         _CLEAN_REPO=$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
+# #         _CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
+# #         _IMAGE="gcr.io/$PROJECT_ID/$$_CLEAN_REPO-$$_CLEAN_BRANCH:$COMMIT_SHA"
+# #         docker build -t "$$_IMAGE" .
+# #         docker push "$$_IMAGE"
+
+# #   # 2. Deploy with Explicit Port 80
+# #   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+# #     entrypoint: 'bash'
+# #     args:
+# #       - '-c'
+# #       - |
+# #         _CLEAN_REPO=$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
+# #         _CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
+# #         _SERVICE="$$_CLEAN_REPO-$$_CLEAN_BRANCH"
+        
+# #         gcloud run deploy "$$_SERVICE" \
+# #           --image "gcr.io/$PROJECT_ID/$$_SERVICE:$COMMIT_SHA" \
+# #           --region us-central1 \
+# #           --platform managed \
+# #           --port 80 \
+# #           --no-allow-unauthenticated
+
+# # # options:
+# # #   logging: CLOUD_LOGGING_ONLY
+
+# # options:
+# #   # This cuts Angular build time significantly
+# #   machineType: 'E2_HIGHCPU_32'
+# #   logging: CLOUD_LOGGING_ONLY
+# #   substitution_option: 'ALLOW_LOOSE'
+
+# #Updated working code
 # steps:
-#   # 1. Build and Push (Sanitized)
+#   # 1. Sanitize Repo and Branch names for Cloud Run naming compliance
+#   # Replaces underscores/slashes with dashes and converts to lowercase
+#   - name: 'bash'
+#     entrypoint: 'bash'
+#     args:
+#       - '-c'
+#       - |
+#         _CLEAN_REPO=$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
+#         _CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
+#         echo "$${_CLEAN_REPO}-$${_CLEAN_BRANCH}" > /workspace/_service_name.txt
+
+#   # 2. Build the container image
+#   # Uses the sanitized name to ensure the image tag is valid
 #   - name: 'gcr.io/cloud-builders/docker'
 #     entrypoint: 'bash'
 #     args:
 #       - '-c'
 #       - |
-#         _CLEAN_REPO=$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
-#         _CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
-#         _IMAGE="gcr.io/$PROJECT_ID/$$_CLEAN_REPO-$$_CLEAN_BRANCH:$COMMIT_SHA"
-#         docker build -t "$$_IMAGE" .
-#         docker push "$$_IMAGE"
+#         _SERVICE_NAME=$(cat /workspace/_service_name.txt)
+#         _IMAGE_NAME="gcr.io/$PROJECT_ID/$$_SERVICE_NAME:$COMMIT_SHA"
+#         docker build -t "$$_IMAGE_NAME" .
 
-#   # 2. Deploy with Explicit Port 80
+#   # 3. Push the image to Google Container Registry
+#   - name: 'gcr.io/cloud-builders/docker'
+#     entrypoint: 'bash'
+#     args:
+#       - '-c'
+#       - |
+#         _SERVICE_NAME=$(cat /workspace/_service_name.txt)
+#         _IMAGE_NAME="gcr.io/$PROJECT_ID/$$_SERVICE_NAME:$COMMIT_SHA"
+#         docker push "$$_IMAGE_NAME"
+
+#   # 4. Deploy to Cloud Run
+#   # --port 80 is specified to match the Nginx default listen port
+#   # --no-allow-unauthenticated is used to prevent build crashes due to Org Policies
 #   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
 #     entrypoint: 'bash'
 #     args:
 #       - '-c'
 #       - |
-#         _CLEAN_REPO=$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
-#         _CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
-#         _SERVICE="$$_CLEAN_REPO-$$_CLEAN_BRANCH"
-        
-#         gcloud run deploy "$$_SERVICE" \
-#           --image "gcr.io/$PROJECT_ID/$$_SERVICE:$COMMIT_SHA" \
+#         _SERVICE_NAME=$(cat /workspace/_service_name.txt)
+#         gcloud run deploy "$$_SERVICE_NAME" \
+#           --image "gcr.io/$PROJECT_ID/$$_SERVICE_NAME:$COMMIT_SHA" \
 #           --region us-central1 \
 #           --platform managed \
 #           --port 80 \
 #           --no-allow-unauthenticated
 
-# # options:
-# #   logging: CLOUD_LOGGING_ONLY
+#   # 5. Optional IAM Binding
+#   # This step attempts to make the service public but will not fail the build if blocked by an Org Policy
+#   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+#     entrypoint: 'bash'
+#     args:
+#       - '-c'
+#       - |
+#         _SERVICE_NAME=$(cat /workspace/_service_name.txt)
+#         gcloud run services add-iam-policy-binding "$$_SERVICE_NAME" \
+#           --region=us-central1 \
+#           --member="allUsers" \
+#           --role="roles/run.invoker" || echo "Public access blocked by Organization Policy. Please update manually in Console."
 
 # options:
-#   # This cuts Angular build time significantly
-#   machineType: 'E2_HIGHCPU_32'
 #   logging: CLOUD_LOGGING_ONLY
-#   substitution_option: 'ALLOW_LOOSE'
+
+# # Note: The images: block is omitted to avoid 'failed to find images' errors 
+# # caused by the dynamic naming used in the bash steps.
+
+
 
 
 steps:
-  # 1. Sanitize Repo and Branch names for Cloud Run naming compliance
-  # Replaces underscores/slashes with dashes and converts to lowercase
+  # 1. Sanitize names for Cloud Run (lowercase, dashes only)
   - name: 'bash'
     entrypoint: 'bash'
     args:
@@ -49,10 +119,10 @@ steps:
       - |
         _CLEAN_REPO=$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
         _CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
-        echo "$${_CLEAN_REPO}-$${_CLEAN_BRANCH}" > /workspace/_service_name.txt
+        # Combine Repo, Branch, and the custom Site Variable for a unique Service Name
+        echo "$${_CLEAN_REPO}-$${_CLEAN_BRANCH}-$${_SITE_ID}" > /workspace/_service_name.txt
 
-  # 2. Build the container image
-  # Uses the sanitized name to ensure the image tag is valid
+  # 2. Build and Push the image
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
@@ -61,20 +131,9 @@ steps:
         _SERVICE_NAME=$(cat /workspace/_service_name.txt)
         _IMAGE_NAME="gcr.io/$PROJECT_ID/$$_SERVICE_NAME:$COMMIT_SHA"
         docker build -t "$$_IMAGE_NAME" .
-
-  # 3. Push the image to Google Container Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        _SERVICE_NAME=$(cat /workspace/_service_name.txt)
-        _IMAGE_NAME="gcr.io/$PROJECT_ID/$$_SERVICE_NAME:$COMMIT_SHA"
         docker push "$$_IMAGE_NAME"
 
-  # 4. Deploy to Cloud Run
-  # --port 80 is specified to match the Nginx default listen port
-  # --no-allow-unauthenticated is used to prevent build crashes due to Org Policies
+  # 3. Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
@@ -88,8 +147,7 @@ steps:
           --port 80 \
           --no-allow-unauthenticated
 
-  # 5. Optional IAM Binding
-  # This step attempts to make the service public but will not fail the build if blocked by an Org Policy
+  # 4. Optional IAM Binding (Non-breaking)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
@@ -99,10 +157,10 @@ steps:
         gcloud run services add-iam-policy-binding "$$_SERVICE_NAME" \
           --region=us-central1 \
           --member="allUsers" \
-          --role="roles/run.invoker" || echo "Public access blocked by Organization Policy. Please update manually in Console."
+          --role="roles/run.invoker" || echo "Public access blocked by Org Policy."
+
+substitutions:
+  _SITE_ID: "default" # This is the fallback value
 
 options:
   logging: CLOUD_LOGGING_ONLY
-
-# Note: The images: block is omitted to avoid 'failed to find images' errors 
-# caused by the dynamic naming used in the bash steps.
