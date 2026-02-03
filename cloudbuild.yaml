@@ -170,49 +170,43 @@
 
 
 
-
 steps:
-  # 1. Sanitize the branch name: replace underscores with dashes
+  # 1. Sanitize the branch name and export to a file
   - name: 'bash'
     args:
       - '-c'
       - |
-        echo "$(echo $BRANCH_NAME | tr '[:upper:]' '[:lower:]' | tr '_' '-')" > /workspace/_sanitized_branch.txt
+        # Replace underscores and slashes with dashes, convert to lowercase
+        CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/--/-/g')
+        echo "$CLEAN_BRANCH" > /workspace/branch_name.txt
 
-  # 2. Build the container image
+  # 2. Build and Push using a single shell context to avoid variable loss
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        _SAFE_BRANCH=$(cat /workspace/_sanitized_branch.txt)
-        docker build -t gcr.io/$PROJECT_ID/$REPO_NAME-$_SAFE_BRANCH:$COMMIT_SHA .
+        _BRANCH=$(cat /workspace/branch_name.txt)
+        # Ensure the name doesn't end in a dash by removing trailing hyphens
+        _SAFE_NAME=$(echo "siteview-$_BRANCH" | sed 's/-$//')
+        
+        docker build -t "gcr.io/$PROJECT_ID/$_SAFE_NAME:$COMMIT_SHA" .
+        docker push "gcr.io/$PROJECT_ID/$_SAFE_NAME:$COMMIT_SHA"
 
-  # 3. Push the image
-  - name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        _SAFE_BRANCH=$(cat /workspace/_sanitized_branch.txt)
-        docker push gcr.io/$PROJECT_ID/$REPO_NAME-$_SAFE_BRANCH:$COMMIT_SHA
-
-  # 4. Deploy to Cloud Run using the sanitized name
+  # 3. Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        _SAFE_BRANCH=$(cat /workspace/_sanitized_branch.txt)
-        gcloud run deploy "$REPO_NAME-$_SAFE_BRANCH" \
-          --image "gcr.io/$PROJECT_ID/$REPO_NAME-$_SAFE_BRANCH:$COMMIT_SHA" \
+        _BRANCH=$(cat /workspace/branch_name.txt)
+        _SAFE_NAME=$(echo "siteview-$_BRANCH" | sed 's/-$//')
+        
+        gcloud run deploy "$_SAFE_NAME" \
+          --image "gcr.io/$PROJECT_ID/$_SAFE_NAME:$COMMIT_SHA" \
           --region us-central1 \
           --platform managed \
           --allow-unauthenticated
 
 options:
   logging: CLOUD_LOGGING_ONLY
-
-images:
-  # Note: Images in GCR can have underscores, but for consistency we use sanitized names
-  - 'gcr.io/$PROJECT_ID/$REPO_NAME'
