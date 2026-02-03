@@ -80,17 +80,19 @@ COPY . .
 # Use the variable in the build command
 RUN npm run build -- --configuration=$BUILD_CONFIG --base-href=/
 
-# Stage 2: Production Stage
+# --- Stage 2: Production Stage ---
 FROM nginx:alpine
 
-# Copy built files
+# 1. Remove default Nginx static assets
+RUN rm -rf /usr/share/nginx/html/*
+
+# 2. Copy the built Angular files from the 'BUILD' stage
+# The 'browser' folder contents must go directly into 'html'
 COPY --from=BUILD /app/dist/sitenov/browser /usr/share/nginx/html
 
-# Replace EXPOSE 80 and CMD ["nginx", "-g", "daemon off;"] with:
-# CMD ["sh", "-c", "sed -i 's/listen  80;/listen '\"$PORT\"';/' /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+# 3. Copy your custom nginx.conf to the Nginx configuration directory
+# This file must exist in your root directory next to the Dockerfile
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Replace the old CMD with this one to handle the dynamic $PORT
-# CMD ["sh", "-c", "sed -i 's/listen  80;/listen '\"$PORT\"';/' /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
-
-# Replace your previous CMD with this more flexible version
+# 4. Handle the dynamic $PORT provided by Cloud Run
 CMD ["sh", "-c", "sed -i 's/listen.*80;/listen '\"$PORT\"';/g' /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
