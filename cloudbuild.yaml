@@ -168,40 +168,37 @@
 # images:
 #   - 'gcr.io/$PROJECT_ID/$REPO_NAME-$BRANCH_NAME:$COMMIT_SHA'
 
+
 steps:
-  # Step 1: Build and Push in a single step to preserve variables
+  # 1. Build and Push the container image
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        # 1. Sanitize branch name (lowercase, replace underscores/slashes with dashes, remove trailing dash)
-        CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
+        # Sanitize Repo and Branch: lowercase, replace underscores with dashes, remove trailing dashes
+        _CLEAN_REPO=$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
+        _CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
+        _FULL_IMAGE_NAME="gcr.io/$PROJECT_ID/$$_CLEAN_REPO-$$_CLEAN_BRANCH:$COMMIT_SHA"
         
-        # 2. Construct the Image Name
-        # Using 'siteview' as a prefix to ensure the name is Cloud Run compliant
-        IMAGE_NAME="gcr.io/$PROJECT_ID/siteview-$CLEAN_BRANCH:$COMMIT_SHA"
-        
-        echo "Building image: $IMAGE_NAME"
-        
-        # 3. Build and Push
-        docker build -t "$IMAGE_NAME" .
-        docker push "$IMAGE_NAME"
+        echo "Building image: $$_FULL_IMAGE_NAME"
+        docker build -t "$$_FULL_IMAGE_NAME" .
+        docker push "$$_FULL_IMAGE_NAME"
 
-  # Step 2: Deploy to Cloud Run
+  # 2. Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
-        SERVICE_NAME="siteview-$CLEAN_BRANCH"
-        IMAGE_NAME="gcr.io/$PROJECT_ID/$SERVICE_NAME:$COMMIT_SHA"
+        _CLEAN_REPO=$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
+        _CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
+        _SERVICE_NAME="$$_CLEAN_REPO-$$_CLEAN_BRANCH"
+        _IMAGE_PATH="gcr.io/$PROJECT_ID/$$_SERVICE_NAME:$COMMIT_SHA"
         
-        echo "Deploying to Service: $SERVICE_NAME"
-        
-        gcloud run deploy "$SERVICE_NAME" \
-          --image "$IMAGE_NAME" \
+        echo "Deploying to Service: $$_SERVICE_NAME"
+        gcloud run deploy "$$_SERVICE_NAME" \
+          --image "$$_IMAGE_PATH" \
           --region us-central1 \
           --platform managed \
           --allow-unauthenticated
