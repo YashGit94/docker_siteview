@@ -86,5 +86,5 @@ FROM nginx:alpine
 # Copy built files
 COPY --from=BUILD /app/dist/sitenov/browser /usr/share/nginx/html
 
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Replace EXPOSE 80 and CMD ["nginx", "-g", "daemon off;"] with:
+CMD ["sh", "-c", "sed -i 's/listen  80;/listen '\"$PORT\"';/' /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
