@@ -168,7 +168,7 @@
 
 #testing
 steps:
-  # Step 1: Build the Docker image
+  # Step 1: Build the Docker image using the GitHub commit SHA as a tag
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/my-repo/siteview-app:$SHORT_SHA', '.']
 
@@ -191,5 +191,6 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
 
+# Store logs in Cloud Logging for easier debugging
 options:
   logging: CLOUD_LOGGING_ONLY
