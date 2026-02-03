@@ -168,24 +168,20 @@
 # images:
 #   - 'gcr.io/$PROJECT_ID/$REPO_NAME-$BRANCH_NAME:$COMMIT_SHA'
 
-
 steps:
-  # 1. Build and Push the container image
+  # 1. Build and Push (Sanitized)
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        # Sanitize Repo and Branch: lowercase, replace underscores with dashes, remove trailing dashes
         _CLEAN_REPO=$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
         _CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
-        _FULL_IMAGE_NAME="gcr.io/$PROJECT_ID/$$_CLEAN_REPO-$$_CLEAN_BRANCH:$COMMIT_SHA"
-        
-        echo "Building image: $$_FULL_IMAGE_NAME"
-        docker build -t "$$_FULL_IMAGE_NAME" .
-        docker push "$$_FULL_IMAGE_NAME"
+        _IMAGE="gcr.io/$PROJECT_ID/$$_CLEAN_REPO-$$_CLEAN_BRANCH:$COMMIT_SHA"
+        docker build -t "$$_IMAGE" .
+        docker push "$$_IMAGE"
 
-  # 2. Deploy to Cloud Run
+  # 2. Deploy with Explicit Port 80
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
@@ -193,15 +189,14 @@ steps:
       - |
         _CLEAN_REPO=$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
         _CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
-        _SERVICE_NAME="$$_CLEAN_REPO-$$_CLEAN_BRANCH"
-        _IMAGE_PATH="gcr.io/$PROJECT_ID/$$_SERVICE_NAME:$COMMIT_SHA"
+        _SERVICE="$$_CLEAN_REPO-$$_CLEAN_BRANCH"
         
-        echo "Deploying to Service: $$_SERVICE_NAME"
-        gcloud run deploy "$$_SERVICE_NAME" \
-          --image "$$_IMAGE_PATH" \
+        gcloud run deploy "$$_SERVICE" \
+          --image "gcr.io/$PROJECT_ID/$$_SERVICE:$COMMIT_SHA" \
           --region us-central1 \
           --platform managed \
-          --allow-unauthenticated
+          --port 80 \
+          --no-allow-unauthenticated
 
 options:
   logging: CLOUD_LOGGING_ONLY
