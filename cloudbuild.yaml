@@ -169,41 +169,32 @@
 #   - 'gcr.io/$PROJECT_ID/$REPO_NAME-$BRANCH_NAME:$COMMIT_SHA'
 
 
-
 steps:
-  # 1. Sanitize the branch name and export to a file
-  - name: 'bash'
-    args:
-      - '-c'
-      - |
-        # Replace underscores and slashes with dashes, convert to lowercase
-        CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/--/-/g')
-        echo "$CLEAN_BRANCH" > /workspace/branch_name.txt
-
-  # 2. Build and Push using a single shell context to avoid variable loss
+  # 1. Build and Push
+  # We use a shell to sanitize the branch name into a local variable '_SAFE_NAME'
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        _BRANCH=$(cat /workspace/branch_name.txt)
-        # Ensure the name doesn't end in a dash by removing trailing hyphens
-        _SAFE_NAME=$(echo "siteview-$_BRANCH" | sed 's/-$//')
+        _SAFE_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
+        _IMAGE_NAME="gcr.io/$PROJECT_ID/siteview-$_SAFE_BRANCH:$COMMIT_SHA"
         
-        docker build -t "gcr.io/$PROJECT_ID/$_SAFE_NAME:$COMMIT_SHA" .
-        docker push "gcr.io/$PROJECT_ID/$_SAFE_NAME:$COMMIT_SHA"
+        docker build -t "$_IMAGE_NAME" .
+        docker push "$_IMAGE_NAME"
 
-  # 3. Deploy to Cloud Run
+  # 2. Deploy to Cloud Run
+  # We repeat the sanitization logic here so Cloud Run gets a valid resource name
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        _BRANCH=$(cat /workspace/branch_name.txt)
-        _SAFE_NAME=$(echo "siteview-$_BRANCH" | sed 's/-$//')
+        _SAFE_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
+        _SERVICE_NAME="siteview-$_SAFE_BRANCH"
         
-        gcloud run deploy "$_SAFE_NAME" \
-          --image "gcr.io/$PROJECT_ID/$_SAFE_NAME:$COMMIT_SHA" \
+        gcloud run deploy "$_SERVICE_NAME" \
+          --image "gcr.io/$PROJECT_ID/siteview-$_SAFE_BRANCH:$COMMIT_SHA" \
           --region us-central1 \
           --platform managed \
           --allow-unauthenticated
