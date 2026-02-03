@@ -8,3 +8,7 @@ steps:
         gcloud builds triggers run ${_TARGET_TRIGGER} \
           --branch=${_TARGET_BRANCH} \
           --substitutions=_IMAGE_NAME=${_IMAGE_NAME},_DOCKERFILE_PATH=${_DOCKERFILE_PATH},_SERVICE_NAME=${_SERVICE_NAME}
+
+# Add this section to resolve the service_account error
+options:
+  logging: CLOUD_LOGGING_ONLY
