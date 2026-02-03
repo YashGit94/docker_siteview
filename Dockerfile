@@ -107,18 +107,22 @@ RUN npm install --silent
 COPY . .
 RUN npm run build -- --configuration=production --base-href=/
 
-# --- Stage 2: Production ---
+# Stage 2: Production
 FROM nginx:alpine
 
 # Remove default nginx static assets
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy build output from 'BUILD' stage to nginx html folder
-# NOTE: Ensure this path matches your Angular output (dist/sitenov/browser)
+# Ensure you copy the CONTENTS of the browser folder, not the folder itself
 COPY --from=BUILD /app/dist/sitenov/browser /usr/share/nginx/html
-
-# Copy your custom nginx.conf to replace the default
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# # Copy build output from 'BUILD' stage to nginx html folder
+# # NOTE: Ensure this path matches your Angular output (dist/sitenov/browser)
+# COPY --from=BUILD /app/dist/sitenov/browser /usr/share/nginx/html
+
+# # Copy your custom nginx.conf to replace the default
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Dynamic port handling for Cloud Run
 CMD ["sh", "-c", "sed -i 's/listen.*80;/listen '\"$PORT\"';/g' /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
