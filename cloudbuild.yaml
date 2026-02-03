@@ -41,8 +41,7 @@
 
 
 steps:
-  # 1. Sanitize Repo and Branch names for Cloud Run compatibility
-  # Replaces underscores and slashes with dashes and converts to lowercase
+  # 1. Sanitize Repo and Branch names
   - name: 'bash'
     entrypoint: 'bash'
     args:
@@ -52,7 +51,7 @@ steps:
         _CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
         echo "$${_CLEAN_REPO}-$${_CLEAN_BRANCH}" > /workspace/_service_name.txt
 
-  # 2. Build the container image
+  # 2. Build and Push (Sanitized)
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
@@ -61,19 +60,9 @@ steps:
         _SERVICE_NAME=$(cat /workspace/_service_name.txt)
         _IMAGE_NAME="gcr.io/$PROJECT_ID/$$_SERVICE_NAME:$COMMIT_SHA"
         docker build -t "$$_IMAGE_NAME" .
-
-  # 3. Push the image to Google Container Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        _SERVICE_NAME=$(cat /workspace/_service_name.txt)
-        _IMAGE_NAME="gcr.io/$PROJECT_ID/$$_SERVICE_NAME:$COMMIT_SHA"
         docker push "$$_IMAGE_NAME"
 
-  # 4. Deploy to Cloud Run
-  # Explicitly sets port 80 to match Nginx default
+  # 3. Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
@@ -87,8 +76,7 @@ steps:
           --port 80 \
           --no-allow-unauthenticated
 
-  # 5. Optional: Set IAM policy to allow public access
-  # This is separated to prevent build failure if the service account lacks IAM permissions
+  # 4. Attempt IAM binding but do not fail the build if Org Policy blocks it
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
@@ -98,11 +86,10 @@ steps:
         gcloud run services add-iam-policy-binding "$$_SERVICE_NAME" \
           --region=us-central1 \
           --member="allUsers" \
-          --role="roles/run.invoker" || echo "Manual IAM update required for public access"
+          --role="roles/run.invoker" || echo "Public access blocked by Organization Policy."
 
 options:
   logging: CLOUD_LOGGING_ONLY
 
-images:
-  # Using a placeholder that the UI will recognize; actual images are pushed in Step 3
-  - 'gcr.io/$PROJECT_ID/siteview-dynamic-image'
+# REMOVED the images: block because we are pushing images manually in step 2.
+# This prevents the 'failed to find images' error.
