@@ -39,9 +39,9 @@
 #   substitution_option: 'ALLOW_LOOSE'
 
 
-
 steps:
-  # 1. Sanitize Repo and Branch names
+  # 1. Sanitize Repo and Branch names for Cloud Run naming compliance
+  # Replaces underscores/slashes with dashes and converts to lowercase
   - name: 'bash'
     entrypoint: 'bash'
     args:
@@ -51,7 +51,8 @@ steps:
         _CLEAN_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | tr '_/' '-' | sed 's/-$//')
         echo "$${_CLEAN_REPO}-$${_CLEAN_BRANCH}" > /workspace/_service_name.txt
 
-  # 2. Build and Push (Sanitized)
+  # 2. Build the container image
+  # Uses the sanitized name to ensure the image tag is valid
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
@@ -60,9 +61,20 @@ steps:
         _SERVICE_NAME=$(cat /workspace/_service_name.txt)
         _IMAGE_NAME="gcr.io/$PROJECT_ID/$$_SERVICE_NAME:$COMMIT_SHA"
         docker build -t "$$_IMAGE_NAME" .
+
+  # 3. Push the image to Google Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        _SERVICE_NAME=$(cat /workspace/_service_name.txt)
+        _IMAGE_NAME="gcr.io/$PROJECT_ID/$$_SERVICE_NAME:$COMMIT_SHA"
         docker push "$$_IMAGE_NAME"
 
-  # 3. Deploy to Cloud Run
+  # 4. Deploy to Cloud Run
+  # --port 80 is specified to match the Nginx default listen port
+  # --no-allow-unauthenticated is used to prevent build crashes due to Org Policies
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
@@ -76,7 +88,8 @@ steps:
           --port 80 \
           --no-allow-unauthenticated
 
-  # 4. Attempt IAM binding but do not fail the build if Org Policy blocks it
+  # 5. Optional IAM Binding
+  # This step attempts to make the service public but will not fail the build if blocked by an Org Policy
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
@@ -86,10 +99,10 @@ steps:
         gcloud run services add-iam-policy-binding "$$_SERVICE_NAME" \
           --region=us-central1 \
           --member="allUsers" \
-          --role="roles/run.invoker" || echo "Public access blocked by Organization Policy."
+          --role="roles/run.invoker" || echo "Public access blocked by Organization Policy. Please update manually in Console."
 
 options:
   logging: CLOUD_LOGGING_ONLY
 
-# REMOVED the images: block because we are pushing images manually in step 2.
-# This prevents the 'failed to find images' error.
+# Note: The images: block is omitted to avoid 'failed to find images' errors 
+# caused by the dynamic naming used in the bash steps.
