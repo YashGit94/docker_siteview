@@ -166,9 +166,9 @@
 #   logging: CLOUD_LOGGING_ONLY
 
 
-
+#testing
 steps:
-  # 1. Build the Docker image
+  # 1. Build the Docker image using the injected variables
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build', 
@@ -177,7 +177,7 @@ steps:
       '.'
     ]
 
-  # 2. Push to Container Registry
+  # 2. Push the image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/${_IMAGE_NAME}:$COMMIT_SHA']
 
@@ -195,6 +195,10 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
+
+# Required to fix the service account logging error
+options:
+  logging: CLOUD_LOGGING_ONLY
 
 substitutions:
   _DOCKERFILE_PATH: 'Dockerfile'
