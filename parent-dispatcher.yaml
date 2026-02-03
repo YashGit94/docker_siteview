@@ -4,15 +4,15 @@ steps:
     args:
       - '-c'
       - |
-        echo "Directing build request to Trigger: ${_TARGET_TRIGGER}"
-        # Added --region flag to ensure the trigger is found
+        echo "Directing build request to Trigger: ${_TARGET_TRIGGER} in region: ${_REGION}"
         gcloud builds triggers run ${_TARGET_TRIGGER} \
           --region=${_REGION} \
           --branch=${_TARGET_BRANCH} \
           --substitutions=_IMAGE_NAME=${_IMAGE_NAME},_DOCKERFILE_PATH=${_DOCKERFILE_PATH},_SERVICE_NAME=${_SERVICE_NAME}
 
+# Required to fix the service account logging error
 options:
   logging: CLOUD_LOGGING_ONLY
 
 substitutions:
-  _REGION: 'global' # Change this to 'us-central1' if your triggers are regional
+  _REGION: 'global'
