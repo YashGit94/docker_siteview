@@ -168,15 +168,15 @@
 
 #testing
 steps:
-  # 1. Build the Docker image
+  # Step 1: Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/my-repo/siteview-app:$SHORT_SHA', '.']
 
-  # 2. Push to Artifact Registry
+  # Step 2: Push the image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/my-repo/siteview-app:$SHORT_SHA']
 
-  # 3. Deploy to Cloud Run
+  # Step 3: Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
@@ -187,20 +187,9 @@ steps:
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/my-repo/siteview-app:$SHORT_SHA'
       - '--region'
       - 'us-central1'
-      - '--port'
-      - '80'
+      - '--platform'
+      - 'managed'
       - '--allow-unauthenticated'
-
-  # 4. LOGGING: Fetch the latest deployment logs to confirm success
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        echo "--------- DEPLOYMENT LOGS --------- "
-        gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=siteview-service" --limit 5
-        echo "--------- SERVICE URL --------- "
-        gcloud run services describe siteview-service --region us-central1 --format='value(status.url)'
 
 options:
   logging: CLOUD_LOGGING_ONLY
