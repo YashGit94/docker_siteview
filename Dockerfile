@@ -87,4 +87,10 @@ FROM nginx:alpine
 COPY --from=BUILD /app/dist/sitenov/browser /usr/share/nginx/html
 
 # Replace EXPOSE 80 and CMD ["nginx", "-g", "daemon off;"] with:
-CMD ["sh", "-c", "sed -i 's/listen  80;/listen '\"$PORT\"';/' /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+# CMD ["sh", "-c", "sed -i 's/listen  80;/listen '\"$PORT\"';/' /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+
+# Replace the old CMD with this one to handle the dynamic $PORT
+# CMD ["sh", "-c", "sed -i 's/listen  80;/listen '\"$PORT\"';/' /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+
+# Replace your previous CMD with this more flexible version
+CMD ["sh", "-c", "sed -i 's/listen.*80;/listen '\"$PORT\"';/g' /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
