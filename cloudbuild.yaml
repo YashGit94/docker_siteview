@@ -133,9 +133,8 @@
 #   logging: CLOUD_LOGGING_ONLY
 
 
-
 steps:
-  # Build using the Repo Name and Branch Name as unique identifiers
+  # 1. Build the container image
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build', 
@@ -143,12 +142,11 @@ steps:
       '.'
     ]
 
-  # Push the unique image
+  # 2. Push the image
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/$REPO_NAME-$BRANCH_NAME:$COMMIT_SHA']
 
-  # Deploy to a unique Cloud Run Service Name
-  # Each Service Name creates a unique URL (e.g., repo-branch-xyz.a.run.app)
+  # 3. Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
@@ -162,3 +160,10 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
+
+# This section fixes the "invalid argument" error regarding service accounts and logging
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+images:
+  - 'gcr.io/$PROJECT_ID/$REPO_NAME-$BRANCH_NAME:$COMMIT_SHA'
