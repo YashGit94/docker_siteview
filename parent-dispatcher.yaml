@@ -17,27 +17,46 @@
 # substitutions:
 #   _REGION: 'global'
 
+# steps:
+#   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+#     entrypoint: 'bash'
+#     args:
+#       - '-c'
+#       - |
+#         echo "Searching for trigger: ${_TRIGGER_NAME}"
+        
+#         # Check if it exists and list available triggers if it doesn't
+#         if ! gcloud builds triggers describe "${_TRIGGER_NAME}" --region="us-central1" > /dev/null 2>&1; then
+#           echo "ERROR: Trigger NOT FOUND. Available triggers in this region are:"
+#           gcloud builds triggers list --region="us-central1" --format="value(name)"
+#           exit 1
+#         fi
+
+#         gcloud builds triggers run "${_TRIGGER_NAME}" \
+#           --region="us-central1" \
+#           --branch="main"
+
+# substitutions:
+#   _TRIGGER_NAME: "your-exact-trigger-name"
+
+# options:
+#   logging: CLOUD_LOGGING_ONLY
+
+
 steps:
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        echo "Searching for trigger: ${_TRIGGER_NAME}"
-        
-        # Check if it exists and list available triggers if it doesn't
-        if ! gcloud builds triggers describe "${_TRIGGER_NAME}" --region="us-central1" > /dev/null 2>&1; then
-          echo "ERROR: Trigger NOT FOUND. Available triggers in this region are:"
-          gcloud builds triggers list --region="us-central1" --format="value(name)"
-          exit 1
-        fi
-
-        gcloud builds triggers run "${_TRIGGER_NAME}" \
-          --region="us-central1" \
-          --branch="main"
+    script: |
+      echo "Firing trigger: $_TRIGGER_NAME"
+      
+      # We attempt to run the trigger. 
+      # Note: The child trigger MUST have its own logging option set!
+      gcloud builds triggers run "$_TRIGGER_NAME" \
+        --region="us-central1" \
+        --branch="main"
 
 substitutions:
-  _TRIGGER_NAME: "your-exact-trigger-name"
+  _TRIGGER_NAME: "enter-name-here"
 
 options:
+  automapSubstitutions: true
   logging: CLOUD_LOGGING_ONLY
