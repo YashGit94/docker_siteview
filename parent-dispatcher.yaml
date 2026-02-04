@@ -29,7 +29,7 @@ steps:
         # We fire the trigger. If it's a 'Manual' trigger with a stored source,
         # it will use that. If not, we fall back to 'main'.
         gcloud builds triggers run "${_TRIGGER_NAME}" \
-          --region="${_REGION}" \
+          --region="global" \
           --branch="main" 
 
 substitutions:
