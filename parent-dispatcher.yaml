@@ -19,24 +19,25 @@
 
 steps:
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'trigger-child-build'
-    script: |
-      #!/usr/bin/env bash
-      echo "------------------------------------------------------"
-      echo "Executing Trigger: $_TRIGGER_NAME"
-      echo "------------------------------------------------------"
-      
-      # Since automapSubstitutions is true, we use $_TRIGGER_NAME 
-      # as a standard bash variable.
-      gcloud builds triggers run "$_TRIGGER_NAME" \
-        --region="us-central1" \
-        --branch="main"
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Searching for trigger: ${_TRIGGER_NAME}"
+        
+        # Check if it exists and list available triggers if it doesn't
+        if ! gcloud builds triggers describe "${_TRIGGER_NAME}" --region="us-central1" > /dev/null 2>&1; then
+          echo "ERROR: Trigger NOT FOUND. Available triggers in this region are:"
+          gcloud builds triggers list --region="us-central1" --format="value(name)"
+          exit 1
+        fi
+
+        gcloud builds triggers run "${_TRIGGER_NAME}" \
+          --region="us-central1" \
+          --branch="main"
 
 substitutions:
-  _TRIGGER_NAME: "enter-name-here"
+  _TRIGGER_NAME: "your-exact-trigger-name"
 
 options:
-  # 1. This maps _TRIGGER_NAME to a bash variable $_TRIGGER_NAME automatically
-  automapSubstitutions: true
-  # 2. This fixes the 'build.service_account' logging error
   logging: CLOUD_LOGGING_ONLY
