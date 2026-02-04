@@ -17,22 +17,26 @@
 # substitutions:
 #   _REGION: 'global'
 
-
 steps:
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        echo "Firing Trigger: ${_TRIGGER_NAME}"
-        
-        # Branch is hardcoded here so you don't have to provide it in the UI
-        gcloud builds triggers run "${_TRIGGER_NAME}" \
-          --region="us-central1" \
-          --branch="main"
+    id: 'trigger-child-build'
+    script: |
+      #!/usr/bin/env bash
+      echo "------------------------------------------------------"
+      echo "Executing Trigger: $_TRIGGER_NAME"
+      echo "------------------------------------------------------"
+      
+      # Since automapSubstitutions is true, we use $_TRIGGER_NAME 
+      # as a standard bash variable.
+      gcloud builds triggers run "$_TRIGGER_NAME" \
+        --region="us-central1" \
+        --branch="main"
 
 substitutions:
-  _TRIGGER_NAME: "my-app-trigger"
+  _TRIGGER_NAME: "enter-name-here"
 
 options:
+  # 1. This maps _TRIGGER_NAME to a bash variable $_TRIGGER_NAME automatically
+  automapSubstitutions: true
+  # 2. This fixes the 'build.service_account' logging error
   logging: CLOUD_LOGGING_ONLY
