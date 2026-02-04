@@ -19,26 +19,19 @@
 
 
 steps:
-  # The gcloud step to execute the existing trigger
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        echo "------------------------------------------------------"
-        echo "Executing Trigger: ${_TRIGGER_NAME_TO_RUN}"
-        echo "In Region: ${_REGION}"
-        echo "------------------------------------------------------"
+        echo "Starting Trigger: ${_TRIGGER_NAME}"
         
-        gcloud builds triggers run "${_TRIGGER_NAME_TO_RUN}" \
-          --region="${_REGION}" \
-          --branch="${_BRANCH_TO_USE}"
+        gcloud builds triggers run "${_TRIGGER_NAME}" \
+          --region="us-central1" \
+          --branch="local-test"
 
-# Define defaults so the build doesn't crash if variables are empty
 substitutions:
-  _TRIGGER_NAME_TO_RUN: "please-provide-name"
-  _REGION: "us-central1"
-  _BRANCH_TO_USE: "main"
+  _TRIGGER_NAME: "enter-name-here" # This is your ONLY input in the console
 
 options:
   logging: CLOUD_LOGGING_ONLY
