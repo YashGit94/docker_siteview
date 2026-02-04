@@ -24,17 +24,15 @@ steps:
     args:
       - '-c'
       - |
-        echo "Running Trigger: ${_TRIGGER_NAME}"
+        echo "Firing Trigger: ${_TRIGGER_NAME}"
         
-        # We fire the trigger. If it's a 'Manual' trigger with a stored source,
-        # it will use that. If not, we fall back to 'main'.
+        # Branch is hardcoded here so you don't have to provide it in the UI
         gcloud builds triggers run "${_TRIGGER_NAME}" \
-          --region="global" \
-          --branch="main" 
+          --region="us-central1" \
+          --branch="main"
 
 substitutions:
-  _TRIGGER_NAME: "my-existing-trigger"
-  _REGION: "us-central1"
+  _TRIGGER_NAME: "my-app-trigger"
 
 options:
   logging: CLOUD_LOGGING_ONLY
