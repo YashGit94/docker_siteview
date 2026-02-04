@@ -1,18 +1,44 @@
+# steps:
+#   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+#     entrypoint: 'bash'
+#     args:
+#       - '-c'
+#       - |
+#         echo "Directing build request to Trigger: ${_TARGET_TRIGGER} in region: ${_REGION}"
+#         gcloud builds triggers run ${_TARGET_TRIGGER} \
+#           --region=${_REGION} \
+#           --branch=${_TARGET_BRANCH} \
+#           --substitutions=_IMAGE_NAME=${_IMAGE_NAME},_DOCKERFILE_PATH=${_DOCKERFILE_PATH},_SERVICE_NAME=${_SERVICE_NAME}
+
+# # Required to fix the service account logging error
+# options:
+#   logging: CLOUD_LOGGING_ONLY
+
+# substitutions:
+#   _REGION: 'global'
+
+
 steps:
+  # The gcloud step to execute the existing trigger
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        echo "Directing build request to Trigger: ${_TARGET_TRIGGER} in region: ${_REGION}"
-        gcloud builds triggers run ${_TARGET_TRIGGER} \
-          --region=${_REGION} \
-          --branch=${_TARGET_BRANCH} \
-          --substitutions=_IMAGE_NAME=${_IMAGE_NAME},_DOCKERFILE_PATH=${_DOCKERFILE_PATH},_SERVICE_NAME=${_SERVICE_NAME}
+        echo "------------------------------------------------------"
+        echo "Executing Trigger: ${_TRIGGER_NAME_TO_RUN}"
+        echo "In Region: ${_REGION}"
+        echo "------------------------------------------------------"
+        
+        gcloud builds triggers run "${_TRIGGER_NAME_TO_RUN}" \
+          --region="${_REGION}" \
+          --branch="${_BRANCH_TO_USE}"
 
-# Required to fix the service account logging error
+# Define defaults so the build doesn't crash if variables are empty
+substitutions:
+  _TRIGGER_NAME_TO_RUN: "please-provide-name"
+  _REGION: "us-central1"
+  _BRANCH_TO_USE: "main"
+
 options:
   logging: CLOUD_LOGGING_ONLY
-
-substitutions:
-  _REGION: 'global'
