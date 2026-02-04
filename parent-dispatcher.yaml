@@ -24,14 +24,10 @@ steps:
     args:
       - '-c'
       - |
-        echo "Starting Trigger: ${_TRIGGER_NAME}"
-        
         gcloud builds triggers run "${_TRIGGER_NAME}" \
           --region="us-central1" \
           --branch="local-test"
 
-substitutions:
-  _TRIGGER_NAME: "enter-name-here" # This is your ONLY input in the console
-
+# ADD THIS SECTION:
 options:
   logging: CLOUD_LOGGING_ONLY
