@@ -29,4 +29,16 @@ resources:
 
 network:
   forwarded_ports:
-    - 8080
+    - 8081
+
+# Update health checks to point to the new port
+liveness_check:
+  path: "/index.html"
+  check_interval_sec: 30
+  timeout_sec: 4
+
+readiness_check:
+  path: "/index.html"
+  check_interval_sec: 5
+  timeout_sec: 4
+  app_start_timeout_sec: 300
