@@ -27,17 +27,26 @@
 # CMD ["nginx", "-g", "daemon off;"]
 
 
-# ... (rest of your build stages remain the same)
+# Stage 1: Build
+FROM node:lts-alpine as build
+WORKDIR /app
 
+# Copy dependency files
+COPY package*.json ./
+RUN npm install --silent
+
+# Copy source and build
+COPY . .
+RUN npm run build -- --configuration=production --base-href=/
+
+# Stage 2: Production
 FROM nginx:alpine
 
-# Update Nginx to listen on 8081 instead of 80 or 8080
+# Configure port 8081 (to avoid reserved 8080 and privileged 80)
 RUN sed -i 's/listen  80;/listen 8081;/g' /etc/nginx/conf.d/default.conf
 
-# Use the correct path from your angular.json
+# CRITICAL: This must match the 'as build' above exactly
 COPY --from=build /app/dist/sitenov /usr/share/nginx/html
 
-# Expose the new non-reserved port
 EXPOSE 8081
-
 CMD ["nginx", "-g", "daemon off;"]
