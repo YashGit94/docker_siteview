@@ -19,6 +19,7 @@
 runtime: custom
 env: flex
 
+# Basic scaling for a single instance
 manual_scaling:
   instances: 1
 
@@ -27,11 +28,12 @@ resources:
   memory_gb: 1.5
   disk_size_gb: 10
 
+# Forwarding to the non-reserved port
 network:
   forwarded_ports:
     - 8081
 
-# Update health checks to point to the new port
+# Ensuring the health check hits the correct port
 liveness_check:
   path: "/index.html"
   check_interval_sec: 30
@@ -41,4 +43,3 @@ readiness_check:
   path: "/index.html"
   check_interval_sec: 5
   timeout_sec: 4
-  app_start_timeout_sec: 300
