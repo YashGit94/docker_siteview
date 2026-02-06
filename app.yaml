@@ -21,12 +21,33 @@
 runtime: custom
 env: flex
 
-# This tells App Engine which port your Nginx is actually listening on
+# App Engine Flexible requires at least one instance
+manual_scaling:
+  instances: 1
+
+resources:
+  cpu: 1
+  memory_gb: 1.5
+  disk_size_gb: 10
+
+# Network configuration to route traffic to your Nginx port
 network:
   forwarded_ports:
     - 8080
-  instance_tag: websocket
 
-# Optional: Map the incoming traffic specifically
-settings:
-  container_port: 8080
+# This check ensures traffic is only sent when the container is ready on 8080
+liveness_check:
+  path: "/index.html"
+  check_interval_sec: 30
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+  initial_delay_sec: 300
+
+readiness_check:
+  path: "/index.html"
+  check_interval_sec: 5
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+  app_start_timeout_sec: 300
