@@ -27,32 +27,17 @@
 # CMD ["nginx", "-g", "daemon off;"]
 
 
-# ... existing build stages ...
+# ... (rest of your build stages remain the same)
 
-# Change 'AS BUILD' to lowercase 'as build'
-FROM node:lts-alpine AS build
-WORKDIR /app
-
-# 1. Copy and install dependencies
-COPY package*.json ./
-RUN npm install --silent
-
-# 2. Copy all application source code
-COPY . .
-
-# 3. Build the Angular application
-RUN npm run build -- --configuration=production --base-href=/
-
-# --- Stage 2: Production Stage ---
 FROM nginx:alpine
 
-# Change Nginx default port to 8080 for App Engine Flexible compliance
-RUN sed -i 's/listen  80;/listen 8080;/g' /etc/nginx/conf.d/default.conf
+# Update Nginx to listen on 8081 instead of 80 or 8080
+RUN sed -i 's/listen  80;/listen 8081;/g' /etc/nginx/conf.d/default.conf
 
-# 4. Copy built files using the lowercase alias 'build'
-# Based on your angular.json, the output is 'dist/sitenov'
+# Use the correct path from your angular.json
 COPY --from=build /app/dist/sitenov /usr/share/nginx/html
 
-EXPOSE 8080
+# Expose the new non-reserved port
+EXPOSE 8081
 
 CMD ["nginx", "-g", "daemon off;"]
