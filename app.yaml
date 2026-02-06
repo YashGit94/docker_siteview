@@ -1,17 +1,32 @@
-# Use a custom runtime to trigger the build from your Dockerfile
+# # Use a custom runtime to trigger the build from your Dockerfile
+# runtime: custom
+# env: flex
+
+# # App Engine Flexible requires at least one instance
+# manual_scaling:
+#   instances: 1
+
+# resources:
+#   cpu: 1
+#   memory_gb: 1.5
+#   disk_size_gb: 10
+
+# # Ensure the network routes traffic to the port exposed in your Dockerfile
+# network:
+#   forwarded_ports:
+#     - 80
+
+
+
 runtime: custom
 env: flex
 
-# App Engine Flexible requires at least one instance
-manual_scaling:
-  instances: 1
-
-resources:
-  cpu: 1
-  memory_gb: 1.5
-  disk_size_gb: 10
-
-# Ensure the network routes traffic to the port exposed in your Dockerfile
+# This tells App Engine which port your Nginx is actually listening on
 network:
   forwarded_ports:
-    - 80
+    - 8080
+  instance_tag: websocket
+
+# Optional: Map the incoming traffic specifically
+settings:
+  container_port: 8080
